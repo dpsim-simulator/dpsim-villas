@@ -25,6 +25,7 @@ if(WITH_SHMEM)
 		ShmemControllableFiltSource.cpp
 		Shmem_CIGRE_MV_PowerFlowTest.cpp
 		Shmem_CIGRE_MV_PowerFlowTest_LoadProfiles.cpp
+		Shmem_CIGRE_MV_PowerFlowTest_SimulationParamsFromJson.cpp
 	)
 endif()
 
