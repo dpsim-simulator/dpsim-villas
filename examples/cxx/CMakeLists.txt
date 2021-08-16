@@ -17,9 +17,6 @@ if(WITH_SHMEM)
 		ShmemDistributedVillas.cpp
 		ShmemControllableSource.cpp
 		ShmemControllableFiltSource.cpp
-		Shmem_CIGRE_MV_PowerFlowTest.cpp
-		Shmem_CIGRE_MV_PowerFlowTest_LoadProfiles.cpp
-		Shmem_CIGRE_MV_PowerFlowTest_SimulationParamsFromJson.cpp
 	)
 endif()
 
@@ -28,6 +25,10 @@ if(WITH_CIM AND WITH_SHMEM)
 		Shmem_WSCC-9bus.cpp
 		Shmem_WSCC-9bus_Ctrl.cpp
 		Shmem_WSCC-9bus_CtrlDist.cpp
+		Shmem_CIGRE_MV_PowerFlowTest.cpp
+		Shmem_CIGRE_MV_PowerFlowTest_LoadProfiles.cpp
+		Shmem_CIGRE_MV_PowerFlowTest_SimulationParamsFromJson.cpp
+		SLEW_Shmem_CIGRE_MV_PowerFlow.cpp
 	)
 endif()
 
