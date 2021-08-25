@@ -1,6 +1,7 @@
 message("Configuring dpsim-villas...")
 
 set(DPSIM_VILLAS_SOURCES
+	${CMAKE_CURRENT_SOURCE_DIR}/src/InterfaceSampleBased.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/InterfaceShmem.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/InterfaceVillas.cpp
     PARENT_SCOPE
