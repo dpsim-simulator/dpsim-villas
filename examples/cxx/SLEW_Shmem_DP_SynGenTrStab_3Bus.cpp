@@ -32,10 +32,6 @@ int main(int argc, char** argv) {
 	//Switch to trigger fault at generator terminal
 	Real SwitchOpen = 1e12;
 	Real SwitchClosed = 0.1;
-	Real cmdInertia_G1= 1.0;
-	Real cmdInertia_G2= 1.0;
-	Real cmdDamping_G1=10.0;
-	Real cmdDamping_G2=10.0;
 
 	Real timeStepPF = finalTime;
 	Real finalTimePF = finalTime+timeStepPF;
@@ -76,10 +72,14 @@ int main(int argc, char** argv) {
 	auto line23PF = SP::Ph1::PiLine::make("PiLine23", Logger::Level::off);
 	line23PF->setParameters(ThreeBus.lineResistance23, ThreeBus.lineInductance23, ThreeBus.lineCapacitance23, ThreeBus.lineConductance23);
 	line23PF->setBaseVoltage(ThreeBus.Vnom);
-	//Switch
-	auto faultPF = CPS::SP::Ph1::Switch::make("Br_fault", Logger::Level::off);
-	faultPF->setParameters(SwitchOpen, SwitchClosed);
-	faultPF->open();
+	//Switch at n2
+	auto faultN2PF = CPS::SP::Ph1::Switch::make("Br_fault_n2", Logger::Level::off);
+	faultN2PF->setParameters(SwitchOpen, SwitchClosed);
+	faultN2PF->open();
+	//Switch at n3
+	auto faultN3PF = CPS::SP::Ph1::Switch::make("Br_fault_n3", Logger::Level::off);
+	faultN3PF->setParameters(SwitchOpen, SwitchClosed);
+	faultN3PF->open();
 
 	// Topology
 	gen1PF->connect({ n1PF });
@@ -88,12 +88,11 @@ int main(int argc, char** argv) {
 	line12PF->connect({ n1PF, n2PF });
 	line13PF->connect({ n1PF, n3PF });
 	line23PF->connect({ n2PF, n3PF });
-	// faultPF->connect({SP::SimNode::GND , n1PF }); //terminal of generator 1
-	faultPF->connect({SP::SimNode::GND , n2PF }); //terminal of generator 2
-	// faultPF->connect({SP::SimNode::GND , n3PF }); //Load bus
+	faultN2PF->connect({SP::SimNode::GND , n2PF });
+	faultN3PF->connect({SP::SimNode::GND , n3PF });
 	auto systemPF = SystemTopology(60,
 			SystemNodeList{n1PF, n2PF, n3PF},
-			SystemComponentList{gen1PF, gen2PF, loadPF, line12PF, line13PF, line23PF, faultPF});
+			SystemComponentList{gen1PF, gen2PF, loadPF, line12PF, line13PF, line23PF, faultN2PF, faultN3PF});
 
 	// Logging
 	auto loggerPF = DataLogger::make(simNamePF);
@@ -125,7 +124,7 @@ int main(int argc, char** argv) {
 	//Synchronous generator 1
 	auto gen1DP = DP::Ph1::SynchronGeneratorTrStab::make("SynGen1", Logger::Level::off);
 	// Xpd is given in p.u of generator base at transfomer primary side and should be transformed to network side
-	gen1DP->setStandardParametersPU(ThreeBus.nomPower_G1, ThreeBus.nomPhPhVoltRMS_G1, ThreeBus.nomFreq_G1, ThreeBus.Xpd_G1*std::pow(ThreeBus.t1_ratio,2), cmdInertia_G1*ThreeBus.H_G1, ThreeBus.Rs_G1, cmdDamping_G1*ThreeBus.D_G1);
+	gen1DP->setStandardParametersPU(ThreeBus.nomPower_G1, ThreeBus.nomPhPhVoltRMS_G1, ThreeBus.nomFreq_G1, ThreeBus.Xpd_G1*std::pow(ThreeBus.t1_ratio,2), ThreeBus.H_G1, ThreeBus.Rs_G1, ThreeBus.D_G1);
 	// Get actual active and reactive power of generator's Terminal from Powerflow solution
 	Complex initApparentPower_G1= gen1PF->getApparentPower();
 	gen1DP->setInitialValues(initApparentPower_G1, ThreeBus.initMechPower_G1);
@@ -133,7 +132,7 @@ int main(int argc, char** argv) {
 	//Synchronous generator 2
 	auto gen2DP = DP::Ph1::SynchronGeneratorTrStab::make("SynGen2", Logger::Level::off);
 	// Xpd is given in p.u of generator base at transfomer primary side and should be transformed to network side
-	gen2DP->setStandardParametersPU(ThreeBus.nomPower_G2, ThreeBus.nomPhPhVoltRMS_G2, ThreeBus.nomFreq_G2, ThreeBus.Xpd_G2*std::pow(ThreeBus.t2_ratio,2), cmdInertia_G2*ThreeBus.H_G2, ThreeBus.Rs_G2, cmdDamping_G2*ThreeBus.D_G2);
+	gen2DP->setStandardParametersPU(ThreeBus.nomPower_G2, ThreeBus.nomPhPhVoltRMS_G2, ThreeBus.nomFreq_G2, ThreeBus.Xpd_G2*std::pow(ThreeBus.t2_ratio,2), ThreeBus.H_G2, ThreeBus.Rs_G2, ThreeBus.D_G2);
 	// Get actual active and reactive power of generator's Terminal from Powerflow solution
 	Complex initApparentPower_G2= gen2PF->getApparentPower();
 	gen2DP->setInitialValues(initApparentPower_G2, ThreeBus.initMechPower_G2);
@@ -155,11 +154,17 @@ int main(int argc, char** argv) {
 	auto line23DP = DP::Ph1::PiLine::make("PiLine23", Logger::Level::off);
 	line23DP->setParameters(ThreeBus.lineResistance23, ThreeBus.lineInductance23, ThreeBus.lineCapacitance23, ThreeBus.lineConductance23);
 
-	//Variable resistance Switch
-	auto faultDP = DP::Ph1::varResSwitch::make("Br_fault", Logger::Level::off);
-	faultDP->setParameters(SwitchOpen, SwitchClosed);
-	faultDP->setInitParameters(timeStep);
-	faultDP->open();
+	// Variable resistance switch at N2
+	auto faultN2DP = std::make_shared<DP::Ph1::TriggeredSwitch>("Br_fault_n2", Logger::Level::off);
+	faultN2DP->setParameters(SwitchOpen, SwitchClosed);
+	faultN2DP->setInitParameters(timeStep);
+	faultN2DP->open();
+
+	// Variable resistance switch at N3
+	auto faultN3DP = std::make_shared<DP::Ph1::TriggeredSwitch>("Br_fault_n3", Logger::Level::off);
+	faultN3DP->setParameters(SwitchOpen, SwitchClosed);
+	faultN3DP->setInitParameters(timeStep);
+	faultN3DP->open();
 
 	// Topology
 	gen1DP->connect({ n1DP });
@@ -168,12 +173,12 @@ int main(int argc, char** argv) {
 	line12DP->connect({ n1DP, n2DP });
 	line13DP->connect({ n1DP, n3DP });
 	line23DP->connect({ n2DP, n3DP });
-	// faultDP->connect({DP::SimNode::GND , n1DP }); //terminal of generator 1
-	faultDP->connect({DP::SimNode::GND , n2DP }); //terminal of generator 2	
-	// faultDP->connect({DP::SimNode::GND , n3DP }); //Load bus
+	faultN2DP->connect({DP::SimNode::GND , n2DP });
+	faultN3DP->connect({DP::SimNode::GND , n3DP });
+
 	auto systemDP = SystemTopology(60,
 			SystemNodeList{n1DP, n2DP, n3DP},
-			SystemComponentList{gen1DP, gen2DP, loadDP, line12DP, line13DP, line23DP, faultDP});
+			SystemComponentList{gen1DP, gen2DP, loadDP, line12DP, line13DP, line23DP, faultN2DP, faultN3DP});
 
 	// Initialization of dynamic topology
 	CIM::Reader reader(simNameDP, Logger::Level::off);
@@ -191,11 +196,33 @@ int main(int argc, char** argv) {
 	InterfaceShmem intf("/dpsim1-villas", "/villas-dpsim1", nullptr, false);
 	simDP.addInterface(&intf,false);
 	
-	simDP.importIdObjAttr("Br_fault","is_closed",0);
+	// Imported signals
+	simDP.importIdObjAttr("Br_fault_n2","trigger_signal",0);
+	simDP.importIdObjAttr("Br_fault_n2","closed_duration",1);
+	simDP.importIdObjAttr("SynGen2","damping",2);
+	simDP.importIdObjAttr("Br_fault_n3","trigger_signal",3);
+	simDP.importIdObjAttr("Br_fault_n3","closed_duration",4);
 
-	simDP.exportIdObjAttr("SynGen2","v_intf",0,CPS::AttributeBase::Modifier::mag);
-	simDP.exportIdObjAttr("SynGen2","i_intf",1,CPS::AttributeBase::Modifier::mag);
-	simDP.exportIdObjAttr("Br_fault","is_closed",2);
+	// Exported signals
+	simDP.exportIdObjAttr("SynGen1","v_intf",0,CPS::AttributeBase::Modifier::mag);
+	simDP.exportIdObjAttr("SynGen1","i_intf",1,CPS::AttributeBase::Modifier::mag);
+	simDP.exportIdObjAttr("SynGen1","w_r",2);
+	simDP.exportIdObjAttr("SynGen1","P_elec",3);
+	simDP.exportIdObjAttr("SynGen2","v_intf",4,CPS::AttributeBase::Modifier::mag);
+	simDP.exportIdObjAttr("SynGen2","i_intf",5,CPS::AttributeBase::Modifier::mag);
+	simDP.exportIdObjAttr("SynGen2","w_r",6);
+	simDP.exportIdObjAttr("SynGen2","P_elec",7);
+	simDP.exportIdObjAttr("SynGen2","delta_r_rel",8);	
+	
+	// Further exported signals for debugging
+	simDP.exportIdObjAttr("SynGen1","damping",9);
+	simDP.exportIdObjAttr("SynGen2","damping",10);
+	simDP.exportIdObjAttr("Br_fault_n2","is_closed",11);
+	simDP.exportIdObjAttr("Br_fault_n2","trigger_signal",12);
+	simDP.exportIdObjAttr("Br_fault_n2","closed_duration",13);
+	simDP.exportIdObjAttr("Br_fault_n3","is_closed",14);
+	simDP.exportIdObjAttr("Br_fault_n3","trigger_signal",15);
+	simDP.exportIdObjAttr("Br_fault_n3","closed_duration",16);
 
 	simDP.run();
 	mSimulationLogCLI->info("overruns: {}", simDP.attribute<Int>("overruns")->getByValue());
