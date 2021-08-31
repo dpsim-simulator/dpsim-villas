@@ -24,15 +24,21 @@ using namespace CPS;
 using namespace CPS::CIM;
 
 /*
- * This example runs the powerflow for the CIGRE MV benchmark system (neglecting the tap changers of the transformers)
+ * This SLEW example runs the powerflow for the CIGRE MV benchmark system.
+ * The simulation is configured according to the json file.
+ * Besides it runs in combination with villas-node to import one load power and export all bus voltages.
  */
+
 int main(int argc, char** argv) {
+
+	// Reads the simulation configuration from the json file
+	// provided by --params=<my-json-file>
 	fs::path configFilename;
-	
 	CommandLineArgs args(argc, argv);
 	configFilename = args.params;
 	std::ifstream jsonFile(configFilename);
 	json simConfig = json::parse(jsonFile);
+
 	const String simName = simConfig["name"].get<std::string>();
 
 	// Find CIM files
@@ -54,7 +60,7 @@ int main(int argc, char** argv) {
 	DPsim::Utils::applySimulationParametersFromJson(simConfig,sim);
 	sim.setDomain(Domain::SP);
 	sim.setSolverType(Solver::Type::NRP);
-	InterfaceShmem intf("/dpsim1-villas", "/villas-dpsim1");
+	InterfaceShmem intf("/dpsim1-villas", "/villas-dpsim1", nullptr, false);
 
 	// Register exportable node voltages
 	UInt o = 0;
@@ -75,9 +81,13 @@ int main(int argc, char** argv) {
 		intf.exportReal(v->phase(), (i*2)+1); o++;
 	}
 
-	sim.addInterface(&intf, false);
-
+	Bool syncstart = false;
+	CPS::Logger::Log mLog = Logger::get(simName, Logger::Level::info, Logger::Level::info);
+	mLog->info("addInterface: syncstart={}", syncstart);
+	sim.addInterface(&intf,syncstart);
+	sim.importIdObjAttr("LOAD-H-4","P",0);
 	sim.run(std::chrono::seconds(5));
+	mLog->info("overruns: {}", sim.attribute<Int>("overruns")->getByValue());
 
 	return 0;
 }
