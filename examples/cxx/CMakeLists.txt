@@ -23,6 +23,7 @@ if(WITH_SHMEM)
 		ShmemDistributedVillas.cpp
 		ShmemControllableSource.cpp
 		ShmemControllableFiltSource.cpp
+		SLEW_Shmem_DP_SynGenTrStab_3Bus.cpp
 	)
 endif()
 
