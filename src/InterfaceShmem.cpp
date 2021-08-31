@@ -58,22 +58,30 @@ void InterfaceShmem::close() {
 }
 
 void InterfaceShmem::readValues(bool blocking) {
+	// mLog->info("ReadValues InterfaceShmem: blocking={}", blocking);
 	Sample *sample = nullptr;
 	int ret = 0;
 	try {
 		if (!blocking) {
-			// Check if theres actually data available
+			// mLog->info("Check if theres actually data available.");
 			ret = queue_signalled_available(&mShmem.read.shared->queue);
-			if (ret <= 0)
+			if (ret <= 0) {
+				// mLog->info("No data available from queue_signalled_available.");
 				return;
+			}
+				
 
 			ret = shmem_int_read(&mShmem, &sample, 1);
-			if (ret == 0)
+			if (ret == 0) {
+				// mLog->info("No data available from shmem_int_read.");
 				return;
+			}
 		}
 		else {
+			// mLog->info("Enter while-loop for shmem_int_read");
 			while (ret == 0)
 				ret = shmem_int_read(&mShmem, &sample, 1);
+			// mLog->info("Leave while-loop for shmem_int_read");
 		}
 		if (ret < 0) {
 			mLog->error("Fatal error: failed to read sample from InterfaceShmem");
@@ -81,6 +89,7 @@ void InterfaceShmem::readValues(bool blocking) {
 			std::exit(1);
 		}
 
+		// mLog->info("Setting import attributes according to sample.");
 		for (auto imp : mImports) {
 			imp(sample);
 		}
@@ -190,7 +199,7 @@ Attribute<Bool>::Ptr InterfaceShmem::importBool(UInt idx) {
 			log->error("incomplete data received from InterfaceShmem");
 			return;
 		}
-		attr->set(smp->data[idx].b);
+		attr->set((Bool)smp->data[idx].f);
 	});
 	mImportAttrs.push_back(attr);
 	return attr;
@@ -262,8 +271,7 @@ void InterfaceShmem::exportBool(Attribute<Bool>::Ptr attr, UInt idx, const std::
 			throw std::out_of_range("not enough space in allocated sample");
 		if (idx >= smp->length)
 			smp->length = idx + 1;
-
-		smp->data[idx].b = attr->getByValue();
+		smp->data[idx].f = (Real)attr->getByValue();
 	});
 	mExportAttrs.push_back(attr);
 	mExportSignals[idx] = Signal(idx, SignalType::BOOLEAN, name, unit);
