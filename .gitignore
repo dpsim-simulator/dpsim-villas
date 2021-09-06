@@ -1,0 +1,12 @@
+logs/
+logs_*/
+*.csv
+*.pdf
+*.svg
+*.png
+
+# CMake
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+install_manifest.txt
