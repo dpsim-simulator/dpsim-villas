@@ -22,49 +22,53 @@
 
 #include <dpsim-villas/InterfaceSampleBased.h>
 
-#include <villas/shmem.hpp>
+#include <villas/node.hpp>
+#include <villas/exceptions.hpp>
+#include <villas/memory.hpp>
+#include <villas/kernel/rt.hpp>
+#include <villas/pool.hpp>
 
 using namespace villas;
 
 namespace DPsim {
-	/// Shmem interface used in combination with VILLAS
-	class InterfaceShmem :
+	class InterfaceVillas :
 		public InterfaceSampleBased,
-		public SharedFactory<InterfaceShmem> {
+		public SharedFactory<InterfaceVillas> {
 
 	public:
-		typedef std::shared_ptr<InterfaceShmem> Ptr;
-		typedef struct node::ShmemConfig Config;
-		typedef struct node::ShmemInterface ShmemInt;
+		typedef std::shared_ptr<InterfaceVillas> Ptr;
+		static UInt villasPriority;
+		static UInt villasAffinity;
+		static UInt villasHugePages;
 
 	protected:
-		ShmemInt mShmem;
-		Config mConf;
+		//Villas node to send / receive data to / from
+		String mNodeConfig;
+		std::unique_ptr<node::Node> mNode;
+
+		int mQueueLength;
+		int mSampleLength;
+		node::Pool mSamplePool;
+
+		static Bool villasInitialized;
 
 	public:
-		/** Create a InterfaceShmem with a specific configuration for the output queue.
+		/** Create a InterfaceVillas with a specific configuration for the VillasNode
 		 *
-		 * @param wname The name of the POSIX shmem object where samples will be written to.
-		 * @param rname The name of the POSIX shmem object where samples will be read from.
-		 * @param conf The configuration object for the output queue (see VILLASnode's documentation), or nullptr for sensible defaults.
+		 * @param name The name of the newly created VillasNode
 		 */
-		InterfaceShmem(const String &wn, const String &rn, Config *conf = nullptr, Bool sync = true, UInt downsampling = 1) :
-			InterfaceSampleBased(wn, rn, sync, downsampling)
-		{
-			if (conf != nullptr) {
-				mConf = *conf;
-			} else {
-				mConf.queuelen = 512;
-				mConf.samplelen = 64;
-				mConf.polling = 0;
-			}
-		}
+		InterfaceVillas(const String &name, const String &nodeConfig, UInt queueLenght = 512, UInt sampleLenght = 64, UInt downsampling = 1);
 
 		void open(CPS::Logger::Log log);
 		void close();
 
 		void readValues(bool blocking = true);
 		void writeValues();
+		void initVillas();
+
+	private:
+		void prepareNode();
+		void setupNodeSignals();
 	};
 }
 

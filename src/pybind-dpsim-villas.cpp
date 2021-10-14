@@ -19,9 +19,11 @@
 #include <pybind11/stl.h>
 
 #include <dpsim-villas/InterfaceShmem.h>
+#include <dpsim-villas/InterfaceVillas.h>
 
 namespace py = pybind11;
 using namespace py::literals;
+using namespace villas;
 
 class PyInterfaceShmem : public DPsim::InterfaceShmem {
 
@@ -38,20 +40,20 @@ public:
 		}
 
 		for (int i = 0; i <= maxIdx; i++) {
-			Signal s;
+			node::Signal::Ptr s;
 			try {
 				s = mExportSignals.at(i);
 			} catch(std::out_of_range &) {
-				s = Signal(i, SignalType::FLOAT);
+				s = std::make_shared<node::Signal>("", "", node::SignalType::FLOAT);
 			}
 
 			auto signal = py::dict(
-				"name"_a = s.mName,
-				"type"_a = signal_type_to_str(s.mType)
+				"name"_a = s->name,
+				"type"_a = node::signal_type_to_str(s->type)
 			);
 
-			if (!s.mUnit.empty()) {
-				signal["unit"] = s.mUnit;
+			if (!s->unit.empty()) {
+				signal["unit"] = s->unit;
 			}
 
 			signals.push_back(signal);
@@ -73,6 +75,23 @@ public:
 	}
 };
 
+class PyInterfaceVillas: public DPsim::InterfaceVillas {
+
+public:
+	using DPsim::InterfaceVillas::InterfaceVillas;
+
+	PyInterfaceVillas(const CPS::String &name, py::dict config, CPS::UInt queueLength, CPS::UInt sampleLength, CPS::UInt downsampling) :
+		InterfaceVillas(
+			name, 
+			(py::str) py::module_::import("json").attr("dumps")(config, "indent"_a = py::none()), //json.dumps(config, indent=None)
+			queueLength,
+			sampleLength,
+			downsampling)
+		{}
+};
+
+
+
 PYBIND11_MODULE(dpsimpyvillas, m) {
 	py::object interface = (py::object) py::module_::import("dpsimpy").attr("Interface");
 
@@ -80,4 +99,7 @@ PYBIND11_MODULE(dpsimpyvillas, m) {
 	    .def(py::init<const CPS::String&, const CPS::String&>(), py::arg("shmwrite") = "/dpsim-villas", py::arg("shmread") = "/villas-dpsim")
 		.def("get_config", &PyInterfaceShmem::getConfig);
 
+	py::class_<PyInterfaceVillas>(m, "InterfaceVillas", interface)
+	    .def(py::init<const CPS::String&, const CPS::String&, CPS::UInt, CPS::UInt, CPS::UInt>(), "name"_a, "config"_a, "queue_length"_a=512, "sample_length"_a = 64, "downsampling"_a=1)
+		.def(py::init<const CPS::String&, py::dict, CPS::UInt, CPS::UInt, CPS::UInt>(), "name"_a, "config"_a, "queue_length"_a=512, "sample_length"_a = 64, "downsampling"_a=1);
 }

@@ -17,7 +17,7 @@
 #include <fstream>
 
 #include <DPsim.h>
-#include <dpsim-villas/InterfaceShmem.h>
+#include <dpsim-villas/InterfaceVillas.h>
 
 using namespace DPsim;
 using namespace CPS::DP;
@@ -26,9 +26,9 @@ using namespace CPS::DP::Ph1;
 int main(int argc, char* argv[]) {
 	// Very simple test circuit. Just a few resistors and an inductance.
 	// Voltage is read from VILLASnode and current through everything is written back.
-	String simName = "Shmem_Example";
+	String simName = "Mqtt_example";
 	CPS::Logger::setLogDir("logs/"+simName);
-	Real timeStep = 0.001;
+	Real timeStep = 0.1;
 
 	// Nodes
 	auto n1 = SimNode::make("n1");
@@ -38,7 +38,7 @@ int main(int argc, char* argv[]) {
 
 	// Components
 	auto evs = VoltageSource::make("v_s");
-	evs->setParameters(Complex(0, 0));
+	evs->setParameters(Complex(5, 0));
 	auto rs =  Resistor::make("r_s");
 	rs->setParameters(1);
 	auto rl =  Resistor::make("r_line");
@@ -59,24 +59,30 @@ int main(int argc, char* argv[]) {
 		SystemNodeList{SimNode::GND, n1, n2, n3, n4},
 		SystemComponentList{evs, rs, rl, ll, rL});
 
-#ifdef REALTIME
 	RealTimeSimulation sim(simName);
 	sim.setSystem(sys);
 	sim.setTimeStep(timeStep);
-	sim.setFinalTime(1.0);
-	InterfaceShmem intf("/villas1-in", "/villas1-out", nullptr, false);
-#else
-	Simulation sim(simName);
-	sim.setSystem(sys);
-	sim.setTimeStep(timeStep);
-	sim.setFinalTime(1.0);
-	InterfaceShmem intf("/villas1-in", "/villas1-out");
-#endif
+	sim.setFinalTime(2.0);
+	
+    std::string mqttConfig = R"STRING({
+        "type": "mqtt",
+        "format": "json",
+        "host": "mqtt",
+        "in": {
+            "subscribe": "/mqtt-dpsim"
+        },
+        "out": {
+            "publish": "/dpsim-mqtt"
+        }
+    })STRING";
+
+    InterfaceVillas intf("dpsim-mqtt", mqttConfig);
 
 	// Interface
 	evs->setAttributeRef("V_ref", intf.importComplex(0));
-	intf.exportComplex(evs->attributeMatrixComp("i_intf")->coeff(0, 0), 0);
-	sim.addInterface(&intf);
+	intf.exportComplex(evs->attributeMatrixComp("v_intf")->coeff(0, 0), 0, "v_src");
+	intf.exportComplex(rL->attributeMatrixComp("v_intf")->coeff(0, 0), 1, "v_load");
+	sim.addInterface(&intf, true);
 
 	// Logger
 	auto logger = DataLogger::make(simName);
@@ -84,11 +90,12 @@ int main(int argc, char* argv[]) {
 	logger->addAttribute("v2", n2->attribute("v"));
 	logger->addAttribute("v3", n3->attribute("v"));
 	logger->addAttribute("v4", n4->attribute("v"));
-	logger->addAttribute("V_ref", evs->attribute("V_ref"));
+	logger->addAttribute("v_src", evs->attribute("V_ref"));
 	logger->addAttribute("i_evs", evs->attributeMatrixComp("i_intf"), 1, 1);
+	logger->addAttribute("v_evs", evs->attributeMatrixComp("v_intf"), 1, 1);
 	sim.addLogger(logger);
 
-	sim.run();
+	sim.run(1);
 
 	//std::ofstream of("task_dependencies.svg");
 	//sim.dependencyGraph().render(of);

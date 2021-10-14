@@ -8,9 +8,15 @@ endif()
 
 if(WITH_SHMEM)
 	list(APPEND LIBRARIES ${VILLASNODE_LIBRARIES})
+	list(APPEND LIBRARIES "jansson")
+	list(APPEND LIBRARIES "uuid")
+	list(APPEND LIBRARIES "villas-common")
 	list(APPEND INCLUDE_DIRS ${VILLASNODE_INCLUDE_DIRS})
 
 	set(SHMEM_SOURCES
+		FileExample.cpp
+		MqttExample.cpp
+		SharedMemExample.cpp
 		ShmemExample.cpp
 		ShmemDistributedReference.cpp
 		ShmemDistributedDirect.cpp
