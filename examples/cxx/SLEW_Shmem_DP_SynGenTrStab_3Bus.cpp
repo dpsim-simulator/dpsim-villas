@@ -36,7 +36,7 @@ int main(int argc, char** argv) {
 	Real timeStepPF = finalTime;
 	Real finalTimePF = finalTime+timeStepPF;
 	String simNamePF = simName + "_PF";
-	Logger::setLogDir("logs/" + simNamePF);
+	CPS::Logger::setLogDir("logs/" + simNamePF);
 
 	// Components
 	auto n1PF = SimNode<Complex>::make("n1", PhaseType::Single);
@@ -44,40 +44,40 @@ int main(int argc, char** argv) {
 	auto n3PF = SimNode<Complex>::make("n3", PhaseType::Single);
 
 	//Synchronous generator 1
-	auto gen1PF = SP::Ph1::SynchronGenerator::make("Generator", Logger::Level::off);
+	auto gen1PF = SP::Ph1::SynchronGenerator::make("Generator", CPS::Logger::Level::off);
 	// setPointVoltage is defined as the voltage at the transfomer primary side and should be transformed to network side
 	gen1PF->setParameters(ThreeBus.nomPower_G1, ThreeBus.nomPhPhVoltRMS_G1, ThreeBus.initActivePower_G1, ThreeBus.setPointVoltage_G1*ThreeBus.t1_ratio, PowerflowBusType::VD);
 	gen1PF->setBaseVoltage(ThreeBus.Vnom);
 
 	//Synchronous generator 2
-	auto gen2PF = SP::Ph1::SynchronGenerator::make("Generator", Logger::Level::off);
+	auto gen2PF = SP::Ph1::SynchronGenerator::make("Generator", CPS::Logger::Level::off);
 	// setPointVoltage is defined as the voltage at the transfomer primary side and should be transformed to network side
 	gen2PF->setParameters(ThreeBus.nomPower_G2, ThreeBus.nomPhPhVoltRMS_G2, ThreeBus.initActivePower_G2, ThreeBus.setPointVoltage_G2*ThreeBus.t2_ratio, PowerflowBusType::PV);
 	gen2PF->setBaseVoltage(ThreeBus.Vnom);
 
 	//use Shunt as Load for powerflow
-	auto loadPF = SP::Ph1::Shunt::make("Load", Logger::Level::off);
+	auto loadPF = SP::Ph1::Shunt::make("Load", CPS::Logger::Level::off);
 	loadPF->setParameters(ThreeBus.activePower_L / std::pow(ThreeBus.Vnom, 2), - ThreeBus.reactivePower_L / std::pow(ThreeBus.Vnom, 2));
 	loadPF->setBaseVoltage(ThreeBus.Vnom);
 	
 	//Line12
-	auto line12PF = SP::Ph1::PiLine::make("PiLine12", Logger::Level::off);
+	auto line12PF = SP::Ph1::PiLine::make("PiLine12", CPS::Logger::Level::off);
 	line12PF->setParameters(ThreeBus.lineResistance12, ThreeBus.lineInductance12, ThreeBus.lineCapacitance12, ThreeBus.lineConductance12);
 	line12PF->setBaseVoltage(ThreeBus.Vnom);
 	//Line13
-	auto line13PF = SP::Ph1::PiLine::make("PiLine13", Logger::Level::off);
+	auto line13PF = SP::Ph1::PiLine::make("PiLine13", CPS::Logger::Level::off);
 	line13PF->setParameters(ThreeBus.lineResistance13, ThreeBus.lineInductance13, ThreeBus.lineCapacitance13, ThreeBus.lineConductance13);
 	line13PF->setBaseVoltage(ThreeBus.Vnom);
 	//Line23
-	auto line23PF = SP::Ph1::PiLine::make("PiLine23", Logger::Level::off);
+	auto line23PF = SP::Ph1::PiLine::make("PiLine23", CPS::Logger::Level::off);
 	line23PF->setParameters(ThreeBus.lineResistance23, ThreeBus.lineInductance23, ThreeBus.lineCapacitance23, ThreeBus.lineConductance23);
 	line23PF->setBaseVoltage(ThreeBus.Vnom);
 	//Switch at n2
-	auto faultN2PF = CPS::SP::Ph1::Switch::make("Br_fault_n2", Logger::Level::off);
+	auto faultN2PF = CPS::SP::Ph1::Switch::make("Br_fault_n2", CPS::Logger::Level::off);
 	faultN2PF->setParameters(SwitchOpen, SwitchClosed);
 	faultN2PF->open();
 	//Switch at n3
-	auto faultN3PF = CPS::SP::Ph1::Switch::make("Br_fault_n3", Logger::Level::off);
+	auto faultN3PF = CPS::SP::Ph1::Switch::make("Br_fault_n3", CPS::Logger::Level::off);
 	faultN3PF->setParameters(SwitchOpen, SwitchClosed);
 	faultN3PF->open();
 
@@ -101,7 +101,7 @@ int main(int argc, char** argv) {
 	loggerPF->addAttribute("v_bus3", n3PF->attribute("v"));
 
 	// Simulation
-	Simulation simPF(simNamePF, Logger::Level::off);
+	Simulation simPF(simNamePF, CPS::Logger::Level::off);
 	simPF.setSystem(systemPF);
 	simPF.setTimeStep(timeStepPF);
 	simPF.setFinalTime(finalTimePF);
@@ -113,7 +113,7 @@ int main(int argc, char** argv) {
 
 	// ----- Dynamic simulation ------
 	String simNameDP = simName + "_DP";
-	Logger::setLogDir("logs/"+simNameDP);
+	CPS::Logger::setLogDir("logs/"+simNameDP);
 	
 	// Nodes
 	auto n1DP = SimNode<Complex>::make("n1", PhaseType::Single);
@@ -122,7 +122,7 @@ int main(int argc, char** argv) {
 
 	// Components
 	//Synchronous generator 1
-	auto gen1DP = DP::Ph1::SynchronGeneratorTrStab::make("SynGen1", Logger::Level::off);
+	auto gen1DP = DP::Ph1::SynchronGeneratorTrStab::make("SynGen1", CPS::Logger::Level::off);
 	// Xpd is given in p.u of generator base at transfomer primary side and should be transformed to network side
 	gen1DP->setStandardParametersPU(ThreeBus.nomPower_G1, ThreeBus.nomPhPhVoltRMS_G1, ThreeBus.nomFreq_G1, ThreeBus.Xpd_G1*std::pow(ThreeBus.t1_ratio,2), ThreeBus.H_G1, ThreeBus.Rs_G1, ThreeBus.D_G1);
 	// Get actual active and reactive power of generator's Terminal from Powerflow solution
@@ -130,7 +130,7 @@ int main(int argc, char** argv) {
 	gen1DP->setInitialValues(initApparentPower_G1, ThreeBus.initMechPower_G1);
 
 	//Synchronous generator 2
-	auto gen2DP = DP::Ph1::SynchronGeneratorTrStab::make("SynGen2", Logger::Level::off);
+	auto gen2DP = DP::Ph1::SynchronGeneratorTrStab::make("SynGen2", CPS::Logger::Level::off);
 	// Xpd is given in p.u of generator base at transfomer primary side and should be transformed to network side
 	gen2DP->setStandardParametersPU(ThreeBus.nomPower_G2, ThreeBus.nomPhPhVoltRMS_G2, ThreeBus.nomFreq_G2, ThreeBus.Xpd_G2*std::pow(ThreeBus.t2_ratio,2), ThreeBus.H_G2, ThreeBus.Rs_G2, ThreeBus.D_G2);
 	// Get actual active and reactive power of generator's Terminal from Powerflow solution
@@ -141,27 +141,27 @@ int main(int argc, char** argv) {
 	gen2DP->setReferenceOmega(gen1DP->attribute<Real>("w_r"), gen1DP->attribute<Real>("delta_r"));
 	
 	///Load
-	auto loadDP=DP::Ph1::RXLoad::make("Load", Logger::Level::off);
+	auto loadDP=DP::Ph1::RXLoad::make("Load", CPS::Logger::Level::off);
 	loadDP->setParameters(ThreeBus.activePower_L, ThreeBus.reactivePower_L, ThreeBus.Vnom);
 
 	//Line12
-	auto line12DP = DP::Ph1::PiLine::make("PiLine12", Logger::Level::off);
+	auto line12DP = DP::Ph1::PiLine::make("PiLine12", CPS::Logger::Level::off);
 	line12DP->setParameters(ThreeBus.lineResistance12, ThreeBus.lineInductance12, ThreeBus.lineCapacitance12, ThreeBus.lineConductance12);
 	//Line13
-	auto line13DP = DP::Ph1::PiLine::make("PiLine13", Logger::Level::off);
+	auto line13DP = DP::Ph1::PiLine::make("PiLine13", CPS::Logger::Level::off);
 	line13DP->setParameters(ThreeBus.lineResistance13, ThreeBus.lineInductance13, ThreeBus.lineCapacitance13, ThreeBus.lineConductance13);
 	//Line23
-	auto line23DP = DP::Ph1::PiLine::make("PiLine23", Logger::Level::off);
+	auto line23DP = DP::Ph1::PiLine::make("PiLine23", CPS::Logger::Level::off);
 	line23DP->setParameters(ThreeBus.lineResistance23, ThreeBus.lineInductance23, ThreeBus.lineCapacitance23, ThreeBus.lineConductance23);
 
 	// Variable resistance switch at N2
-	auto faultN2DP = std::make_shared<DP::Ph1::TriggeredSwitch>("Br_fault_n2", Logger::Level::off);
+	auto faultN2DP = std::make_shared<DP::Ph1::TriggeredSwitch>("Br_fault_n2", CPS::Logger::Level::off);
 	faultN2DP->setParameters(SwitchOpen, SwitchClosed);
 	faultN2DP->setInitParameters(timeStep);
 	faultN2DP->open();
 
 	// Variable resistance switch at N3
-	auto faultN3DP = std::make_shared<DP::Ph1::TriggeredSwitch>("Br_fault_n3", Logger::Level::off);
+	auto faultN3DP = std::make_shared<DP::Ph1::TriggeredSwitch>("Br_fault_n3", CPS::Logger::Level::off);
 	faultN3DP->setParameters(SwitchOpen, SwitchClosed);
 	faultN3DP->setInitParameters(timeStep);
 	faultN3DP->open();
@@ -181,10 +181,10 @@ int main(int argc, char** argv) {
 			SystemComponentList{gen1DP, gen2DP, loadDP, line12DP, line13DP, line23DP, faultN2DP, faultN3DP});
 
 	// Initialization of dynamic topology
-	CIM::Reader reader(simNameDP, Logger::Level::off);
-	reader.initDynamicSystemTopologyWithPowerflow(systemPF, systemDP);
+	CIM::Reader reader(simNameDP, CPS::Logger::Level::off);
+	systemDP.initWithPowerflow(systemPF);
 
-	CPS::Logger::Log mSimulationLogCLI = Logger::get(simName, Logger::Level::off, Logger::Level::info);
+	CPS::Logger::Log mSimulationLogCLI = CPS::Logger::get(simName, CPS::Logger::Level::off, CPS::Logger::Level::info);
 
 	RealTimeSimulation simDP(simNameDP, CPS::Logger::Level::info);
 	simDP.setSystem(systemDP);
@@ -192,6 +192,7 @@ int main(int argc, char** argv) {
 	simDP.setFinalTime(finalTime);
 	simDP.setDomain(Domain::DP);
 	simDP.doSystemMatrixRecomputation(true);
+	simDP.setMnaSolverImplementation(MnaSolverFactory::MnaSolverImpl::EigenSparse);
 
 	InterfaceShmem intf("/dpsim1-villas", "/villas-dpsim1", nullptr, false);
 	simDP.addInterface(&intf,false);
