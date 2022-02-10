@@ -97,7 +97,7 @@ Attribute<Bool>::Ptr InterfaceSampleBased::importBool(UInt idx) {
 			log->error("incomplete data received from InterfaceVillas");
 			return;
 		}
-		attr->set(smp->data[idx].b);
+		attr->set((Bool)smp->data[idx].f);
 	});
 	mImportAttrs.push_back(attr);
 	mImportSignals[idx] = std::make_shared<node::Signal>("", "", node::SignalType::BOOLEAN);
@@ -192,7 +192,7 @@ void InterfaceSampleBased::exportBool(Attribute<Bool>::Ptr attr, UInt idx, const
 		if (idx >= smp->length)
 			smp->length = idx + 1;
 
-		smp->data[idx].b = attr->getByValue();
+		smp->data[idx].f = (Real)attr->getByValue();
 	});
 	mExportAttrs.push_back(attr);
 	mExportSignals[idx] = std::make_shared<node::Signal>(name, unit, node::SignalType::BOOLEAN);
