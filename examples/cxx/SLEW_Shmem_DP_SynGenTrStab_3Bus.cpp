@@ -1,5 +1,6 @@
 #include <DPsim.h>
 #include <dpsim-villas/InterfaceShmem.h>
+#include <dpsim-villas/InterfaceVillas.h>
 #include <../../Examples/Cxx/Examples.h>
 
 using namespace DPsim;
@@ -59,7 +60,7 @@ int main(int argc, char** argv) {
 	auto loadPF = SP::Ph1::Shunt::make("Load", CPS::Logger::Level::off);
 	loadPF->setParameters(ThreeBus.activePower_L / std::pow(ThreeBus.Vnom, 2), - ThreeBus.reactivePower_L / std::pow(ThreeBus.Vnom, 2));
 	loadPF->setBaseVoltage(ThreeBus.Vnom);
-	
+
 	//Line12
 	auto line12PF = SP::Ph1::PiLine::make("PiLine12", CPS::Logger::Level::off);
 	line12PF->setParameters(ThreeBus.lineResistance12, ThreeBus.lineInductance12, ThreeBus.lineCapacitance12, ThreeBus.lineConductance12);
@@ -114,7 +115,7 @@ int main(int argc, char** argv) {
 	// ----- Dynamic simulation ------
 	String simNameDP = simName + "_DP";
 	CPS::Logger::setLogDir("logs/"+simNameDP);
-	
+
 	// Nodes
 	auto n1DP = SimNode<Complex>::make("n1", PhaseType::Single);
 	auto n2DP = SimNode<Complex>::make("n2", PhaseType::Single);
@@ -139,7 +140,7 @@ int main(int argc, char** argv) {
 
 	gen2DP->setModelFlags(true, true);
 	gen2DP->setReferenceOmega(gen1DP->attribute<Real>("w_r"), gen1DP->attribute<Real>("delta_r"));
-	
+
 	///Load
 	auto loadDP=DP::Ph1::RXLoad::make("Load", CPS::Logger::Level::off);
 	loadDP->setParameters(ThreeBus.activePower_L, ThreeBus.reactivePower_L, ThreeBus.Vnom);
@@ -194,9 +195,21 @@ int main(int argc, char** argv) {
 	simDP.doSystemMatrixRecomputation(true);
 	simDP.setMnaSolverImplementation(MnaSolverFactory::MnaSolverImpl::EigenSparse);
 
-	InterfaceShmem intf("/dpsim1-villas", "/villas-dpsim1", nullptr, false);
-	simDP.addInterface(&intf,false);
-	
+	std::string shmemConfig = R"STRING(
+	{
+		"type": "shmem",
+		"in": {
+			"name": "villas-dpsim1"
+		},
+		"out": {
+			"name": "dpsim1-villas"
+		},
+		"queuelen": 1024
+	})STRING";
+
+	InterfaceVillas intf("dpsim-shmem", shmemConfig);
+	simDP.addInterface(&intf, false);
+
 	// Imported signals
 	simDP.importIdObjAttr("Br_fault_n2","trigger_signal",0);
 	simDP.importIdObjAttr("Br_fault_n2","closed_duration",1);
